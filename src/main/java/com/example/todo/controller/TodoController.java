@@ -5,6 +5,7 @@ import com.example.todo.exception.TodoNotFoundException;
 import com.example.todo.model.Todo;
 import com.example.todo.service.TodoService;
 import jakarta.validation.Valid;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -60,5 +61,11 @@ public class TodoController {
     @ExceptionHandler(TodoNotFoundException.class)
     public ResponseEntity<ApiError> handleTodoNotFound(TodoNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError(exception.getMessage()));
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiError> handleOptimisticLockingFailure(OptimisticLockingFailureException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiError("Todo was updated by another request. Please retry."));
     }
 }

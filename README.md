@@ -64,9 +64,14 @@ Todo object format:
   "id": 1,
   "title": "Learn Spring Boot",
   "description": "Build Todo CRUD",
-  "completed": false
+  "completed": false,
+  "createdAt": "2026-04-26T21:40:00.123456",
+  "updatedAt": "2026-04-26T21:40:00.123456",
+  "version": 0
 }
 ```
+
+System-managed fields (read-only): `id`, `createdAt`, `updatedAt`, `version`
 
 ### 1) Create Todo
 
@@ -89,7 +94,10 @@ Todo object format:
   "id": 1,
   "title": "Learn Spring Boot",
   "description": "Build Todo CRUD",
-  "completed": false
+  "completed": false,
+  "createdAt": "2026-04-26T21:40:00.123456",
+  "updatedAt": "2026-04-26T21:40:00.123456",
+  "version": 0
 }
 ```
 
@@ -105,13 +113,19 @@ Todo object format:
     "id": 1,
     "title": "Learn Spring Boot",
     "description": "Build Todo CRUD",
-    "completed": false
+    "completed": false,
+    "createdAt": "2026-04-26T21:40:00.123456",
+    "updatedAt": "2026-04-26T21:40:00.123456",
+    "version": 0
   },
   {
     "id": 2,
     "title": "Connect to AWS RDS",
     "description": "Use PostgreSQL datasource",
-    "completed": true
+    "completed": true,
+    "createdAt": "2026-04-26T21:41:10.012345",
+    "updatedAt": "2026-04-26T21:42:45.765432",
+    "version": 1
   }
 ]
 ```
@@ -127,7 +141,10 @@ Todo object format:
   "id": 1,
   "title": "Learn Spring Boot",
   "description": "Build Todo CRUD",
-  "completed": false
+  "completed": false,
+  "createdAt": "2026-04-26T21:40:00.123456",
+  "updatedAt": "2026-04-26T21:40:00.123456",
+  "version": 0
 }
 ```
 
@@ -161,7 +178,10 @@ Todo object format:
   "id": 1,
   "title": "Learn Spring Boot",
   "description": "CRUD completed",
-  "completed": true
+  "completed": true,
+  "createdAt": "2026-04-26T21:40:00.123456",
+  "updatedAt": "2026-04-26T21:43:15.987654",
+  "version": 1
 }
 ```
 
@@ -175,4 +195,11 @@ Todo object format:
 
 - `title` is required (`@NotBlank`).
 - When validation fails, Spring Boot returns `400 Bad Request`.
+- Concurrent update conflicts return `409 Conflict` with:
+
+```json
+{
+  "message": "Todo was updated by another request. Please retry."
+}
+```
 
