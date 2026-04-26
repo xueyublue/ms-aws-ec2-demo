@@ -7,6 +7,7 @@
 - Maven
 - Spring Data JPA
 - PostgreSQL (AWS RDS compatible)
+- AWS SQS event publishing (optional)
 
 ## Run from Local CLI (Remote PostgreSQL / AWS RDS)
 
@@ -17,6 +18,10 @@ $env:SPRING_DATASOURCE_URL="jdbc:postgresql://<rds-endpoint>:5432/<db-name>?sslm
 $env:SPRING_DATASOURCE_USERNAME="<db-username>"
 $env:SPRING_DATASOURCE_PASSWORD="<db-password>"
 $env:SPRING_JPA_HIBERNATE_DDL_AUTO="update"
+$env:APP_SQS_ENABLED="false"
+# Optional only when APP_SQS_ENABLED=true:
+# $env:APP_SQS_REGION="ap-southeast-1"
+# $env:APP_SQS_TODO_CREATED_QUEUE_URL="<sqs-queue-url>"
 mvn spring-boot:run
 ```
 
@@ -27,6 +32,10 @@ export SPRING_DATASOURCE_URL="jdbc:postgresql://<rds-endpoint>:5432/<db-name>?ss
 export SPRING_DATASOURCE_USERNAME="<db-username>"
 export SPRING_DATASOURCE_PASSWORD="<db-password>"
 export SPRING_JPA_HIBERNATE_DDL_AUTO="update"
+export APP_SQS_ENABLED="false"
+# Optional only when APP_SQS_ENABLED=true:
+# export APP_SQS_REGION="ap-southeast-1"
+# export APP_SQS_TODO_CREATED_QUEUE_URL="<sqs-queue-url>"
 mvn spring-boot:run
 ```
 
@@ -43,6 +52,9 @@ mvn spring-boot:run
    - `SPRING_DATASOURCE_USERNAME=<db-username>`
    - `SPRING_DATASOURCE_PASSWORD=<db-password>`
    - `SPRING_JPA_HIBERNATE_DDL_AUTO=update`
+   - `APP_SQS_ENABLED=false` (set to `true` to enable SQS publish)
+   - `APP_SQS_REGION=ap-southeast-1` (required only when SQS is enabled)
+   - `APP_SQS_TODO_CREATED_QUEUE_URL=<sqs-queue-url>` (required only when SQS is enabled)
 5. Click `Run`.
 
 After startup, verify:
@@ -202,4 +214,47 @@ System-managed fields (read-only): `id`, `createdAt`, `updatedAt`, `version`
   "message": "Todo was updated by another request. Please retry."
 }
 ```
+
+## Todo Created Event (SQS)
+
+When a new Todo is created successfully, the app sends a `TODO_CREATED` message to SQS after transaction commit.
+
+Example message body:
+
+```json
+{
+  "eventType": "TODO_CREATED",
+  "sentAt": "2026-04-26T22:05:23.123456",
+  "todo": {
+    "id": 1,
+    "title": "Learn Spring Boot",
+    "description": "Build Todo CRUD",
+    "completed": false,
+    "createdAt": "2026-04-26T22:05:23.000001",
+    "updatedAt": "2026-04-26T22:05:23.000001",
+    "version": 0
+  }
+}
+```
+
+Required environment variables for SQS publishing:
+- `APP_SQS_ENABLED=true`
+- `APP_SQS_REGION=<aws-region>`
+- `APP_SQS_TODO_CREATED_QUEUE_URL=<sqs-queue-url>`
+
+If SQS is disabled (`APP_SQS_ENABLED=false`), Todo creation still works and no message is sent.
+
+## Testing
+
+Run all tests:
+
+```bash
+mvn test
+```
+
+Current test coverage includes:
+- Repository tests (`TodoRepositoryTests`)
+- Service tests (`TodoServiceTests`)
+- Controller tests (`TodoControllerTests`)
+- Application context test (`TodoApplicationTests`)
 

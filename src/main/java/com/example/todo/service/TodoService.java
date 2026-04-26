@@ -1,9 +1,12 @@
 package com.example.todo.service;
 
 import com.example.todo.exception.TodoNotFoundException;
+import com.example.todo.event.TodoCreatedEvent;
 import com.example.todo.model.Todo;
 import com.example.todo.repository.TodoRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -11,9 +14,11 @@ import java.util.List;
 public class TodoService {
 
     private final TodoRepository todoRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public TodoService(TodoRepository todoRepository) {
+    public TodoService(TodoRepository todoRepository, ApplicationEventPublisher eventPublisher) {
         this.todoRepository = todoRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     public List<Todo> getAll() {
@@ -24,9 +29,20 @@ public class TodoService {
         return todoRepository.findById(id).orElseThrow(() -> new TodoNotFoundException(id));
     }
 
+    @Transactional
     public Todo create(Todo todo) {
         todo.setId(null);
-        return todoRepository.save(todo);
+        Todo savedTodo = todoRepository.save(todo);
+        eventPublisher.publishEvent(new TodoCreatedEvent(
+                savedTodo.getId(),
+                savedTodo.getTitle(),
+                savedTodo.getDescription(),
+                savedTodo.isCompleted(),
+                savedTodo.getCreatedAt(),
+                savedTodo.getUpdatedAt(),
+                savedTodo.getVersion()
+        ));
+        return savedTodo;
     }
 
     public Todo update(Long id, Todo todo) {
