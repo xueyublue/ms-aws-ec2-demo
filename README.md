@@ -7,7 +7,7 @@
 - Maven
 - Spring Data JPA
 - PostgreSQL (AWS RDS compatible)
-- AWS SQS event publishing (optional)
+- AWS SQS publish + consume (optional)
 
 ## Run from Local CLI (Remote PostgreSQL / AWS RDS)
 
@@ -22,7 +22,38 @@ $env:APP_SQS_ENABLED="false"
 # Optional only when APP_SQS_ENABLED=true:
 # $env:APP_SQS_REGION="ap-southeast-1"
 # $env:APP_SQS_TODO_CREATED_QUEUE_URL="<sqs-queue-url>"
+# $env:APP_SQS_CONSUMER_ENABLED="true"
+# $env:APP_SQS_CONSUMER_QUEUE_URL="<sqs-queue-url>"
 mvn spring-boot:run
+```
+
+## AWS Credentials Setup (Local)
+
+Before using SQS features locally, configure AWS credentials on your machine.
+
+1. In AWS Console, create a new IAM user for programmatic access (for example: `todo-app-local`).
+2. Attach required permissions (least privilege):
+   - For publish: `sqs:SendMessage`
+   - For consume: `sqs:ReceiveMessage`, `sqs:DeleteMessage`, `sqs:GetQueueAttributes`
+3. Create access keys for this IAM user and download/copy:
+   - `AWS Access Key ID`
+   - `AWS Secret Access Key`
+4. On your local machine, run:
+
+```bash
+aws configure
+```
+
+5. Provide values when prompted:
+   - `AWS Access Key ID`
+   - `AWS Secret Access Key`
+   - `Default region name` (for example: `ap-southeast-2`)
+   - `Default output format` (for example: `json`)
+
+Optional verification:
+
+```bash
+aws sts get-caller-identity
 ```
 
 ### macOS Local (Terminal / zsh)
@@ -36,6 +67,8 @@ export APP_SQS_ENABLED="false"
 # Optional only when APP_SQS_ENABLED=true:
 # export APP_SQS_REGION="ap-southeast-1"
 # export APP_SQS_TODO_CREATED_QUEUE_URL="<sqs-queue-url>"
+# export APP_SQS_CONSUMER_ENABLED="true"
+# export APP_SQS_CONSUMER_QUEUE_URL="<sqs-queue-url>"
 mvn spring-boot:run
 ```
 
@@ -55,11 +88,15 @@ mvn spring-boot:run
    - `APP_SQS_ENABLED=false` (set to `true` to enable SQS publish)
    - `APP_SQS_REGION=ap-southeast-1` (required only when SQS is enabled)
    - `APP_SQS_TODO_CREATED_QUEUE_URL=<sqs-queue-url>` (required only when SQS is enabled)
+   - `APP_SQS_CONSUMER_ENABLED=false` (set to `true` to enable SQS consumer polling)
+   - `APP_SQS_CONSUMER_QUEUE_URL=<sqs-queue-url>` (optional; defaults to `APP_SQS_TODO_CREATED_QUEUE_URL`)
 5. Click `Run`.
 
 After startup, verify:
 - `GET http://localhost:8080/api/todos`
 - Data is persisted in your RDS database.
+- If SQS publishing is enabled, creating a Todo sends a `TODO_CREATED` message.
+- If SQS consumer is enabled, consumed messages are saved to `sqs_message_log`.
 
 ## API
 
@@ -244,6 +281,33 @@ Required environment variables for SQS publishing:
 
 If SQS is disabled (`APP_SQS_ENABLED=false`), Todo creation still works and no message is sent.
 
+AWS permissions required for publishing:
+- `sqs:SendMessage` on the configured queue
+
+## SQS Consumer and Message Log Table
+
+When SQS consumer is enabled, the app polls SQS and stores each consumed message in DB table `sqs_message_log`, then deletes it from the queue.
+
+Consumer environment variables:
+- `APP_SQS_CONSUMER_ENABLED=true`
+- `APP_SQS_CONSUMER_QUEUE_URL=<sqs-queue-url>` (optional; defaults to `APP_SQS_TODO_CREATED_QUEUE_URL`)
+- `APP_SQS_CONSUMER_POLL_DELAY_MS=5000` (optional)
+- `APP_SQS_CONSUMER_MAX_MESSAGES=10` (optional)
+- `APP_SQS_CONSUMER_WAIT_TIME_SECONDS=10` (optional)
+
+`sqs_message_log` includes:
+- `message_id` (unique SQS message id)
+- `queue_url`
+- `body`
+- `attributes_json`
+- `message_attributes_json`
+- `received_at`
+
+AWS permissions required for consuming:
+- `sqs:ReceiveMessage`
+- `sqs:DeleteMessage`
+- `sqs:GetQueueAttributes`
+
 ## Testing
 
 Run all tests:
@@ -256,5 +320,6 @@ Current test coverage includes:
 - Repository tests (`TodoRepositoryTests`)
 - Service tests (`TodoServiceTests`)
 - Controller tests (`TodoControllerTests`)
+- SQS consumer tests (`SqsMessageConsumerTests`)
 - Application context test (`TodoApplicationTests`)
 

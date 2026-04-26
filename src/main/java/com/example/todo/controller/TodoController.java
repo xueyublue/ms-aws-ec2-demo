@@ -5,6 +5,8 @@ import com.example.todo.exception.TodoNotFoundException;
 import com.example.todo.model.Todo;
 import com.example.todo.service.TodoService;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +27,8 @@ import java.util.List;
 @RequestMapping("/api/todos")
 public class TodoController {
 
+    private static final Logger log = LoggerFactory.getLogger(TodoController.class);
+
     private final TodoService todoService;
 
     public TodoController(TodoService todoService) {
@@ -33,38 +37,45 @@ public class TodoController {
 
     @GetMapping
     public List<Todo> getAll() {
+        log.debug("Received request to list todos.");
         return todoService.getAll();
     }
 
     @GetMapping("/{id}")
     public Todo getById(@PathVariable Long id) {
+        log.debug("Received request to get todo. id={}", id);
         return todoService.getById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Todo create(@Valid @RequestBody Todo todo) {
+        log.info("Received request to create todo. title='{}'", todo.getTitle());
         return todoService.create(todo);
     }
 
     @PutMapping("/{id}")
     public Todo update(@PathVariable Long id, @Valid @RequestBody Todo todo) {
+        log.info("Received request to update todo. id={}", id);
         return todoService.update(id, todo);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
+        log.info("Received request to delete todo. id={}", id);
         todoService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     @ExceptionHandler(TodoNotFoundException.class)
     public ResponseEntity<ApiError> handleTodoNotFound(TodoNotFoundException exception) {
+        log.warn("Todo request failed: {}", exception.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError(exception.getMessage()));
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
     public ResponseEntity<ApiError> handleOptimisticLockingFailure(OptimisticLockingFailureException exception) {
+        log.warn("Todo update conflict detected: {}", exception.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiError("Todo was updated by another request. Please retry."));
     }

@@ -40,6 +40,7 @@ public class TodoCreatedSqsPublisher {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onTodoCreated(TodoCreatedEvent event) {
         if (todoCreatedQueueUrl == null || todoCreatedQueueUrl.isBlank()) {
+            log.error("SQS publishing is enabled but queue URL is missing. property=app.sqs.todo-created-queue-url");
             throw new IllegalStateException("SQS is enabled but app.sqs.todo-created-queue-url is not set");
         }
 
@@ -54,9 +55,12 @@ public class TodoCreatedSqsPublisher {
                     .queueUrl(todoCreatedQueueUrl)
                     .messageBody(messageBody)
                     .build());
+            log.info("Published TODO_CREATED event to SQS successfully. todoId={}, queueUrl={}",
+                    event.id(), todoCreatedQueueUrl);
         } catch (SqsException exception) {
             // DB transaction is already committed at this phase, so avoid failing the request path.
-            log.error("Failed to publish TODO_CREATED event to SQS. todoId={}", event.id(), exception);
+            log.error("Failed to publish TODO_CREATED event to SQS. todoId={}, queueUrl={}",
+                    event.id(), todoCreatedQueueUrl, exception);
         }
     }
 
