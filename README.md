@@ -8,31 +8,71 @@
 - Spring Data JPA
 - PostgreSQL (AWS RDS compatible)
 
-## Run
+## Run from Local CLI (Remote PostgreSQL / AWS RDS)
 
-```bash
+### Windows Local (PowerShell)
+
+```powershell
+$env:SPRING_DATASOURCE_URL="jdbc:postgresql://<rds-endpoint>:5432/<db-name>?sslmode=require"
+$env:SPRING_DATASOURCE_USERNAME="<db-username>"
+$env:SPRING_DATASOURCE_PASSWORD="<db-password>"
+$env:SPRING_JPA_HIBERNATE_DDL_AUTO="update"
 mvn spring-boot:run
 ```
 
-Set DB connection variables before running:
+### macOS Local (Terminal / zsh)
 
 ```bash
 export SPRING_DATASOURCE_URL="jdbc:postgresql://<rds-endpoint>:5432/<db-name>?sslmode=require"
 export SPRING_DATASOURCE_USERNAME="<db-username>"
 export SPRING_DATASOURCE_PASSWORD="<db-password>"
+export SPRING_JPA_HIBERNATE_DDL_AUTO="update"
+mvn spring-boot:run
 ```
 
-(On PowerShell, use `$env:SPRING_DATASOURCE_URL="..."` format.)
+## Run from IntelliJ (Remote PostgreSQL / AWS RDS)
+
+1. Open this project in IntelliJ and wait for Maven import to finish.
+2. Set Project SDK to Java 25:
+   - `File` -> `Project Structure` -> `Project SDK` -> `JDK 25`
+3. Create a Spring Boot run configuration:
+   - `Run` -> `Edit Configurations` -> `+` -> `Spring Boot`
+   - Main class: `com.example.todo.TodoApplication`
+4. In the run configuration, set Environment variables:
+   - `SPRING_DATASOURCE_URL=jdbc:postgresql://<rds-endpoint>:5432/<db-name>?sslmode=require`
+   - `SPRING_DATASOURCE_USERNAME=<db-username>`
+   - `SPRING_DATASOURCE_PASSWORD=<db-password>`
+   - `SPRING_JPA_HIBERNATE_DDL_AUTO=update`
+5. Click `Run`.
+
+After startup, verify:
+- `GET http://localhost:8080/api/todos`
+- Data is persisted in your RDS database.
 
 ## API
 
-- `GET /api/todos` - list todos
-- `GET /api/todos/{id}` - get one todo
-- `POST /api/todos` - create todo
-- `PUT /api/todos/{id}` - update todo
-- `DELETE /api/todos/{id}` - delete todo
+Base URL: `http://localhost:8080`
 
-Example create payload:
+Content type:
+- Request: `application/json`
+- Response: `application/json` (except `DELETE`, which returns empty body)
+
+Todo object format:
+
+```json
+{
+  "id": 1,
+  "title": "Learn Spring Boot",
+  "description": "Build Todo CRUD",
+  "completed": false
+}
+```
+
+### 1) Create Todo
+
+- Method/Path: `POST /api/todos`
+- Success status: `201 Created`
+- Request body:
 
 ```json
 {
@@ -41,4 +81,98 @@ Example create payload:
   "completed": false
 }
 ```
+
+- Success response body:
+
+```json
+{
+  "id": 1,
+  "title": "Learn Spring Boot",
+  "description": "Build Todo CRUD",
+  "completed": false
+}
+```
+
+### 2) List Todos
+
+- Method/Path: `GET /api/todos`
+- Success status: `200 OK`
+- Success response body:
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Learn Spring Boot",
+    "description": "Build Todo CRUD",
+    "completed": false
+  },
+  {
+    "id": 2,
+    "title": "Connect to AWS RDS",
+    "description": "Use PostgreSQL datasource",
+    "completed": true
+  }
+]
+```
+
+### 3) Get Todo by ID
+
+- Method/Path: `GET /api/todos/{id}`
+- Success status: `200 OK`
+- Success response body:
+
+```json
+{
+  "id": 1,
+  "title": "Learn Spring Boot",
+  "description": "Build Todo CRUD",
+  "completed": false
+}
+```
+
+- Not found status: `404 Not Found`
+- Not found response body:
+
+```json
+{
+  "message": "Todo not found with id 999"
+}
+```
+
+### 4) Update Todo
+
+- Method/Path: `PUT /api/todos/{id}`
+- Success status: `200 OK`
+- Request body:
+
+```json
+{
+  "title": "Learn Spring Boot",
+  "description": "CRUD completed",
+  "completed": true
+}
+```
+
+- Success response body:
+
+```json
+{
+  "id": 1,
+  "title": "Learn Spring Boot",
+  "description": "CRUD completed",
+  "completed": true
+}
+```
+
+### 5) Delete Todo
+
+- Method/Path: `DELETE /api/todos/{id}`
+- Success status: `204 No Content`
+- Success response body: empty
+
+### Validation Behavior
+
+- `title` is required (`@NotBlank`).
+- When validation fails, Spring Boot returns `400 Bad Request`.
 
