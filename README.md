@@ -9,6 +9,26 @@
 - PostgreSQL (AWS RDS compatible)
 - AWS SQS publish + consume (optional)
 
+## High-Level Architecture Flow
+
+```text
+Client
+  -> POST /api/todos
+  -> Todo API (Spring Boot)
+  -> Save Todo to PostgreSQL (RDS)
+  -> Publish TODO_CREATED event to SQS
+  -> SQS Consumer polls queue
+  -> Save consumed message details to PostgreSQL table (sqs_message_log)
+```
+
+Flow summary:
+1. API receives Todo create request.
+2. Todo record is persisted in the `todo` table.
+3. App publishes a `TODO_CREATED` message to SQS (when publisher is enabled).
+4. Consumer polls SQS and reads messages (when consumer is enabled).
+5. Consumer stores message metadata/body into `sqs_message_log`.
+6. Consumer deletes processed message from SQS queue.
+
 ## Run from Local CLI (Remote PostgreSQL / AWS RDS)
 
 ### Windows Local (PowerShell)
