@@ -9,6 +9,8 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      APP_HEALTHCHECK_URL: ${{ secrets.APP_HEALTHCHECK_URL }}
 
     steps:
       - name: Checkout
@@ -52,6 +54,6 @@ jobs:
           "
 
       - name: Optional health check
-        if: ${{ secrets.APP_HEALTHCHECK_URL != '' }}
+        if: ${{ env.APP_HEALTHCHECK_URL != '' }}
         run: |
-          curl --fail --retry 10 --retry-delay 3 "${{ secrets.APP_HEALTHCHECK_URL }}"
+          curl --fail --retry 10 --retry-delay 3 "$APP_HEALTHCHECK_URL"
