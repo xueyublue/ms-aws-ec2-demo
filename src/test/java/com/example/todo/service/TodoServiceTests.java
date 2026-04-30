@@ -55,12 +55,16 @@ class TodoServiceTests {
         input.setTitle("Create item");
         input.setDescription("desc");
         input.setCompleted(false);
+        input.setAssignee("alice");
+        input.setLabels(List.of("backend", "high-priority"));
 
         Todo saved = new Todo();
         saved.setId(1L);
         saved.setTitle("Create item");
         saved.setDescription("desc");
         saved.setCompleted(false);
+        saved.setAssignee("alice");
+        saved.setLabels(List.of("backend", "high-priority"));
 
         when(todoRepository.save(any(Todo.class))).thenReturn(saved);
 
@@ -77,6 +81,8 @@ class TodoServiceTests {
         assertThat(event.title()).isEqualTo("Create item");
         assertThat(event.description()).isEqualTo("desc");
         assertThat(event.completed()).isFalse();
+        assertThat(event.assignee()).isEqualTo("alice");
+        assertThat(event.labels()).containsExactly("backend", "high-priority");
 
         assertThat(result.getId()).isEqualTo(1L);
     }
@@ -97,11 +103,15 @@ class TodoServiceTests {
         existing.setTitle("old");
         existing.setDescription("old description");
         existing.setCompleted(false);
+        existing.setAssignee("old-assignee");
+        existing.setLabels(List.of("legacy"));
 
         Todo incoming = new Todo();
         incoming.setTitle("new");
         incoming.setDescription("new description");
         incoming.setCompleted(true);
+        incoming.setAssignee("new-assignee");
+        incoming.setLabels(List.of("api", "urgent"));
 
         when(todoRepository.findById(7L)).thenReturn(Optional.of(existing));
         when(todoRepository.save(existing)).thenReturn(existing);
@@ -111,6 +121,8 @@ class TodoServiceTests {
         assertThat(updated.getTitle()).isEqualTo("new");
         assertThat(updated.getDescription()).isEqualTo("new description");
         assertThat(updated.isCompleted()).isTrue();
+        assertThat(updated.getAssignee()).isEqualTo("new-assignee");
+        assertThat(updated.getLabels()).containsExactly("api", "urgent");
         verify(todoRepository).save(existing);
     }
 

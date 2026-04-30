@@ -139,6 +139,8 @@ Todo object format:
   "title": "Learn Spring Boot",
   "description": "Build Todo CRUD",
   "completed": false,
+  "assignee": "alice",
+  "labels": ["backend", "urgent"],
   "createdAt": "2026-04-26T21:40:00.123456",
   "updatedAt": "2026-04-26T21:40:00.123456",
   "version": 0
@@ -157,7 +159,9 @@ System-managed fields (read-only): `id`, `createdAt`, `updatedAt`, `version`
 {
   "title": "Learn Spring Boot",
   "description": "Build Todo CRUD",
-  "completed": false
+  "completed": false,
+  "assignee": "alice",
+  "labels": ["backend", "urgent"]
 }
 ```
 
@@ -169,6 +173,8 @@ System-managed fields (read-only): `id`, `createdAt`, `updatedAt`, `version`
   "title": "Learn Spring Boot",
   "description": "Build Todo CRUD",
   "completed": false,
+  "assignee": "alice",
+  "labels": ["backend", "urgent"],
   "createdAt": "2026-04-26T21:40:00.123456",
   "updatedAt": "2026-04-26T21:40:00.123456",
   "version": 0
@@ -188,6 +194,8 @@ System-managed fields (read-only): `id`, `createdAt`, `updatedAt`, `version`
     "title": "Learn Spring Boot",
     "description": "Build Todo CRUD",
     "completed": false,
+    "assignee": "alice",
+    "labels": ["backend", "urgent"],
     "createdAt": "2026-04-26T21:40:00.123456",
     "updatedAt": "2026-04-26T21:40:00.123456",
     "version": 0
@@ -197,6 +205,8 @@ System-managed fields (read-only): `id`, `createdAt`, `updatedAt`, `version`
     "title": "Connect to AWS RDS",
     "description": "Use PostgreSQL datasource",
     "completed": true,
+    "assignee": "bob",
+    "labels": ["database"],
     "createdAt": "2026-04-26T21:41:10.012345",
     "updatedAt": "2026-04-26T21:42:45.765432",
     "version": 1
@@ -216,6 +226,8 @@ System-managed fields (read-only): `id`, `createdAt`, `updatedAt`, `version`
   "title": "Learn Spring Boot",
   "description": "Build Todo CRUD",
   "completed": false,
+  "assignee": "alice",
+  "labels": ["backend", "urgent"],
   "createdAt": "2026-04-26T21:40:00.123456",
   "updatedAt": "2026-04-26T21:40:00.123456",
   "version": 0
@@ -241,7 +253,9 @@ System-managed fields (read-only): `id`, `createdAt`, `updatedAt`, `version`
 {
   "title": "Learn Spring Boot",
   "description": "CRUD completed",
-  "completed": true
+  "completed": true,
+  "assignee": "bob",
+  "labels": ["backend", "done"]
 }
 ```
 
@@ -253,6 +267,8 @@ System-managed fields (read-only): `id`, `createdAt`, `updatedAt`, `version`
   "title": "Learn Spring Boot",
   "description": "CRUD completed",
   "completed": true,
+  "assignee": "bob",
+  "labels": ["backend", "done"],
   "createdAt": "2026-04-26T21:40:00.123456",
   "updatedAt": "2026-04-26T21:43:15.987654",
   "version": 1
@@ -268,6 +284,7 @@ System-managed fields (read-only): `id`, `createdAt`, `updatedAt`, `version`
 ### Validation Behavior
 
 - `title` is required (`@NotBlank`).
+- `labels` is optional; when provided, each label must be non-blank.
 - When validation fails, Spring Boot returns `400 Bad Request`.
 - Concurrent update conflicts return `409 Conflict` with:
 
@@ -292,6 +309,8 @@ Example message body:
     "title": "Learn Spring Boot",
     "description": "Build Todo CRUD",
     "completed": false,
+    "assignee": "alice",
+    "labels": ["backend", "urgent"],
     "createdAt": "2026-04-26T22:05:23.000001",
     "updatedAt": "2026-04-26T22:05:23.000001",
     "version": 0

@@ -48,6 +48,8 @@ public class TodoService {
                 savedTodo.getTitle(),
                 savedTodo.getDescription(),
                 savedTodo.isCompleted(),
+                savedTodo.getAssignee(),
+                savedTodo.getLabels(),
                 savedTodo.getCreatedAt(),
                 savedTodo.getUpdatedAt(),
                 savedTodo.getVersion()
@@ -62,6 +64,8 @@ public class TodoService {
         existing.setTitle(todo.getTitle());
         existing.setDescription(todo.getDescription());
         existing.setCompleted(todo.isCompleted());
+        existing.setAssignee(todo.getAssignee());
+        existing.setLabels(todo.getLabels());
         Todo updated = todoRepository.save(existing);
         log.info("Todo updated successfully. id={}, version={}", updated.getId(), updated.getVersion());
         return updated;

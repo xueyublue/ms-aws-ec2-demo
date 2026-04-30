@@ -19,10 +19,14 @@ class TodoRepositoryTests {
         todo.setTitle("Initial title");
         todo.setDescription("Initial description");
         todo.setCompleted(false);
+        todo.setAssignee("alice");
+        todo.setLabels(java.util.List.of("backend", "urgent"));
 
         Todo saved = todoRepository.saveAndFlush(todo);
 
         assertThat(saved.getId()).isNotNull();
+        assertThat(saved.getAssignee()).isEqualTo("alice");
+        assertThat(saved.getLabels()).containsExactly("backend", "urgent");
         assertThat(saved.getCreatedAt()).isNotNull();
         assertThat(saved.getUpdatedAt()).isNotNull();
         assertThat(saved.getVersion()).isNotNull();
@@ -34,13 +38,19 @@ class TodoRepositoryTests {
         todo.setTitle("Initial title");
         todo.setDescription("Initial description");
         todo.setCompleted(false);
+        todo.setAssignee("alice");
+        todo.setLabels(java.util.List.of("backend"));
 
         Todo saved = todoRepository.saveAndFlush(todo);
         Long initialVersion = saved.getVersion();
 
         saved.setCompleted(true);
+        saved.setAssignee("bob");
+        saved.setLabels(java.util.List.of("backend", "done"));
         Todo updated = todoRepository.saveAndFlush(saved);
 
+        assertThat(updated.getAssignee()).isEqualTo("bob");
+        assertThat(updated.getLabels()).containsExactly("backend", "done");
         assertThat(updated.getVersion()).isGreaterThan(initialVersion);
         assertThat(updated.getUpdatedAt()).isNotNull();
         assertThat(updated.getCreatedAt()).isNotNull();
