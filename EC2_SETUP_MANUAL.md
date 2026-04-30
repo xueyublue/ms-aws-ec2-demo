@@ -120,8 +120,8 @@ Create a dedicated IAM role and attach it to your EC2 instance.
 }
 ```
 
-1. Policy name example: `todo-ms-sqs-policy`.
-2. Open role `todo-ms-ec2-role` -> **Add permissions** -> attach `todo-ms-sqs-policy`.
+3. Policy name example: `todo-ms-sqs-policy`.
+4. Open role `todo-ms-ec2-role` -> **Add permissions** -> attach `todo-ms-sqs-policy`.
 
 ### 3.3 (Optional) Add KMS Permissions
 
@@ -213,10 +213,17 @@ Build from local machine (or CI):
 mvn clean package -DskipTests
 ```
 
+Prepare deployment directories on EC2 (run once):
+
+```bash
+ssh -i <your-key.pem> ec2-user@<ec2-public-ip> "mkdir -p /home/ec2-user/app/releases /home/ec2-user/app/current"
+```
+
 Copy jar to EC2:
 
 ```bash
-scp -i <your-key.pem> target/todo-0.0.1-SNAPSHOT.jar ec2-user@<ec2-public-ip>:/home/ec2-user/app.jar
+scp -i <your-key.pem> target/todo-0.0.1-SNAPSHOT.jar ec2-user@<ec2-public-ip>:/home/ec2-user/app/releases/app-manual.jar
+ssh -i <your-key.pem> ec2-user@<ec2-public-ip> "ln -sfn /home/ec2-user/app/releases/app-manual.jar /home/ec2-user/app/current/app.jar"
 ```
 
 ## 6) Configure Environment Variables on EC2
@@ -254,9 +261,9 @@ After=network.target
 
 [Service]
 User=ec2-user
-WorkingDirectory=/home/ec2-user
+WorkingDirectory=/home/ec2-user/app
 EnvironmentFile=/home/ec2-user/todo.env
-ExecStart=/usr/bin/java -jar /home/ec2-user/app.jar
+ExecStart=/usr/bin/java -jar /home/ec2-user/app/current/app.jar
 SuccessExitStatus=143
 Restart=always
 RestartSec=5
@@ -295,8 +302,8 @@ journalctl -u todo -f
 curl http://<ec2-public-ip>:8080/api/todos
 ```
 
-1. Create a Todo via `POST /api/todos`.
-2. Confirm:
+2. Create a Todo via `POST /api/todos`.
+3. Confirm:
   - Todo row is persisted in `todo` table.
   - SQS message is published.
   - Consumer stores message in `sqs_message_log`.
