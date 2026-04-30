@@ -2,15 +2,15 @@
 
 This guide explains how to set up a production-style CI/CD pipeline for this project using:
 
--   GitHub Actions
--   Maven build/test
--   SSH deploy to EC2
--   `systemd` service restart (`todo`)
+- GitHub Actions
+- Maven build/test
+- SSH deploy to EC2
+- `systemd` service restart (`todo`)
 
 ## Related Manuals
 
--   Project setup and runtime config: `README.md`
--   EC2 infrastructure setup guide: `EC2_SETUP_MANUAL.md`
+- Project setup and runtime config: `README.md`
+- EC2 infrastructure setup guide: `EC2_SETUP_MANUAL.md`
 
 ---
 
@@ -29,13 +29,13 @@ Developer push/merge to main
 
 ## 2) Prerequisites
 
--   GitHub repository for this project
--   Running EC2 instance with app already deployed once
--   `todo` systemd service already configured on EC2
--   SSH access to EC2 confirmed
--   Java 25 runtime installed on EC2
--   Security group allows:
-    -   SSH `22` from GitHub Actions runners (or temporarily broad access until tightened with alternatives)
+- GitHub repository for this project
+- Running EC2 instance with app already deployed once
+- `todo` systemd service already configured on EC2
+- SSH access to EC2 confirmed
+- Java 25 runtime installed on EC2
+- Security group allows:
+  - SSH `22` from GitHub Actions runners (or temporarily broad access until tightened with alternatives)
 
 > Note: GitHub Actions runners use dynamic IP ranges. If strict ingress is required, prefer SSM deployment or a self-hosted runner in your VPC.
 
@@ -54,14 +54,14 @@ mkdir -p /home/ec2-user/app/current
 
 Recommended convention:
 
--   Release jars: `/home/ec2-user/app/releases/app-<timestamp>.jar`
--   Active jar symlink: `/home/ec2-user/app/current/app.jar`
+- Release jars: `/home/ec2-user/app/releases/app-<timestamp>.jar`
+- Active jar symlink: `/home/ec2-user/app/current/app.jar`
 
 ### 3.2 Ensure systemd points to stable symlink path (step-by-step)
 
 Goal: make sure `todo.service` always starts the stable symlink path:
 
--   `/home/ec2-user/app/current/app.jar`
+- `/home/ec2-user/app/current/app.jar`
 
 #### 3.2.1 Check current service file
 
@@ -89,7 +89,7 @@ ExecStart=/usr/bin/java -jar /home/ec2-user/app/current/app.jar
 
 Save and exit:
 
--   Press `Ctrl + O`, Enter, then `Ctrl + X`.
+- Press `Ctrl + O`, Enter, then `Ctrl + X`.
 
 #### 3.2.3 Reload systemd and verify
 
@@ -144,8 +144,8 @@ ssh-keygen -t ed25519 -C "github-actions-deploy" -f github_actions_deploy_key
 
 This creates:
 
--   `github_actions_deploy_key` (private key)
--   `github_actions_deploy_key.pub` (public key)
+- `github_actions_deploy_key` (private key)
+- `github_actions_deploy_key.pub` (public key)
 
 Add public key to EC2:
 
@@ -168,14 +168,20 @@ In GitHub repo: **Settings -> Secrets and variables -> Actions -> New repository
 
 Create these secrets:
 
--   `EC2_HOST`: EC2 public IP or DNS
--   `EC2_USER`: `ec2-user`
--   `EC2_SSH_KEY`: full content of private key (`github_actions_deploy_key`)
--   `EC2_APP_DIR`: `/home/ec2-user/app`
+- `EC2_HOST`: EC2 public IP or DNS
+- `EC2_USER`: `ec2-user`
+- `EC2_SSH_KEY`: full content of private key (`github_actions_deploy_key`)
+- `EC2_APP_DIR`: `/home/ec2-user/app`
 
 Optional:
 
--   `APP_HEALTHCHECK_URL`: `http://<ec2-public-ip>:8080/api/todos`
+- `APP_HEALTHCHECK_PATH`: `/api/todos`
+
+Security recommendation:
+
+- Keep EC2 inbound `8080` restricted to your own public IP (or private network/LB only).
+- Do not open `8080` for GitHub Actions runner IPs.
+- Run CI health checks through SSH on EC2 localhost (`127.0.0.1`) instead.
 
 > Keep secrets masked and never commit private keys in repo.
 
@@ -197,6 +203,8 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      APP_HEALTHCHECK_PATH: ${{ secrets.APP_HEALTHCHECK_PATH }}
 
     steps:
       - name: Checkout
@@ -228,7 +236,7 @@ jobs:
 
       - name: Upload release jar
         run: |
-          scp -i ~/.ssh/id_ed25519 "${{ steps.artifact.outputs.jar_file }}" 
+          scp -i ~/.ssh/id_ed25519 "${{ steps.artifact.outputs.jar_file }}" \
             "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.EC2_APP_DIR }}/releases/${{ steps.artifact.outputs.release_name }}"
 
       - name: Switch symlink and restart service
@@ -239,10 +247,11 @@ jobs:
             sudo systemctl is-active --quiet todo
           "
 
-      - name: Optional health check
-        if: ${{ secrets.APP_HEALTHCHECK_URL != '' }}
+      - name: Optional health check (on EC2 localhost)
+        if: ${{ env.APP_HEALTHCHECK_PATH != '' }}
         run: |
-          curl --fail --retry 10 --retry-delay 3 "${{ secrets.APP_HEALTHCHECK_URL }}"
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" \
+            "curl --fail --retry 10 --retry-delay 3 http://127.0.0.1:8080$APP_HEALTHCHECK_PATH"
 ```
 
 ---
@@ -264,13 +273,13 @@ Set these GitHub controls so code cannot be merged/deployed without validation.
 1. Ruleset name: `protect-main`.
 2. Under **Enforcement status**, choose **Active**.
 3. Under **Targets**, set:
-   - **Target**: `Branch`
-   - **Branch targeting criteria**: `Include default branch` (or explicitly `main`)
+  - **Target**: `Branch`
+  - **Branch targeting criteria**: `Include default branch` (or explicitly `main`)
 4. Under **Branch protections**, enable:
-   - **Require a pull request before merging**
-   - **Require status checks to pass**
-   - **Block force pushes**
-   - **Block deletions**
+  - **Require a pull request before merging**
+  - **Require status checks to pass**
+  - **Block force pushes**
+  - **Block deletions**
 
 ### 7.3 Configure pull request requirements
 
@@ -312,8 +321,8 @@ jobs:
     environment: production
 ```
 
-7. Commit the workflow change.
-8. On next run, GitHub pauses the job for reviewer approval before continuing.
+1. Commit the workflow change.
+2. On next run, GitHub pauses the job for reviewer approval before continuing.
 
 ### 7.6 Verify protection is working
 
@@ -338,8 +347,8 @@ git pull
 git checkout -b test/cicd-pipeline
 ```
 
-2. Make a harmless change (for example, add one line in `README.md`).
-3. Commit and push:
+1. Make a harmless change (for example, add one line in `README.md`).
+2. Commit and push:
 
 ```bash
 git add README.md
@@ -353,23 +362,23 @@ Choose one method:
 
 1. Open a PR from `test/cicd-pipeline` to `main` and merge (if deploy runs on `main` pushes).
 2. Or manually trigger from GitHub:
-   - Go to **Actions**.
-   - Open **Build and Deploy to EC2** workflow.
-   - Click **Run workflow**.
-   - Select branch (usually `main`), then click **Run workflow**.
+  - Go to **Actions**.
+  - Open **Build and Deploy to EC2** workflow.
+  - Click **Run workflow**.
+  - Select branch (usually `main`), then click **Run workflow**.
 
 ### 8.3 Validate each workflow step in GitHub
 
 1. Open the workflow run.
 2. Confirm these steps are green:
-   - **Checkout**
-   - **Set up JDK 25**
-   - **Build and test**
-   - **Resolve artifact path**
-   - **Setup SSH**
-   - **Upload release jar**
-   - **Switch symlink and restart service**
-   - **Optional health check** (if configured)
+  - **Checkout**
+  - **Set up JDK 25**
+  - **Build and test**
+  - **Resolve artifact path**
+  - **Setup SSH**
+  - **Upload release jar**
+  - **Switch symlink and restart service**
+  - **Optional health check** (if configured)
 3. If you enabled Environment approval, approve the pending deployment when prompted.
 
 ### 8.4 Verify deployment on EC2
@@ -401,7 +410,8 @@ curl http://<ec2-public-ip>:8080/api/todos
 Expected:
 
 - You get HTTP `200` with JSON response.
-- If health check URL is configured, the workflow should already have passed this.
+- If health check path is configured, the workflow already validates from EC2 localhost over SSH.
+- This means you can keep EC2 inbound `8080` restricted and do not need to allow GitHub runner IP ranges.
 
 ---
 
@@ -424,20 +434,20 @@ sudo systemctl status todo
 
 After pipeline run:
 
-1.  GitHub Actions job status is green.
-2.  EC2 service is active:
+1. GitHub Actions job status is green.
+2. EC2 service is active:
 
 ```bash
 sudo systemctl status todo
 ```
 
-1.  App endpoint works:
+1. App endpoint works:
 
 ```bash
 curl http://<ec2-public-ip>:8080/api/todos
 ```
 
-1.  App logs show normal startup:
+1. App logs show normal startup:
 
 ```bash
 journalctl -u todo -n 200 --no-pager
@@ -449,41 +459,42 @@ journalctl -u todo -n 200 --no-pager
 
 ### SSH permission denied
 
--   Check `EC2_SSH_KEY` secret content is correct and complete.
--   Ensure public key is in `~/.ssh/authorized_keys` for `ec2-user`.
--   Confirm EC2 Security Group allows SSH from required source.
+- Check `EC2_SSH_KEY` secret content is correct and complete.
+- Ensure public key is in `~/.ssh/authorized_keys` for `ec2-user`.
+- Confirm EC2 Security Group allows SSH from required source.
 
 ### systemctl restart fails in workflow
 
--   Validate sudoers file permits `systemctl restart todo`.
--   Check service file path and app jar path.
+- Validate sudoers file permits `systemctl restart todo`.
+- Check service file path and app jar path.
 
 ### Workflow cannot find jar
 
--   Ensure Maven package step runs successfully.
--   Check output of `ls target/*.jar`.
+- Ensure Maven package step runs successfully.
+- Check output of `ls target/*.jar`.
 
 ### Service starts but app not healthy
 
--   Check env file values on EC2 (`todo.env`).
--   Check RDS connectivity and SQS IAM permissions.
--   Inspect logs: `journalctl -u todo -f`.
+- Check env file values on EC2 (`todo.env`).
+- Check RDS connectivity and SQS IAM permissions.
+- Inspect logs: `journalctl -u todo -f`.
 
 ---
 
 ## 12) Security Best Practices
 
--   Use dedicated deploy key pair for CI/CD.
--   Rotate deploy keys regularly.
--   Use IAM role on EC2 for AWS SDK access (no static AWS keys in pipeline).
--   Never store DB credentials in repository.
--   Prefer Secrets Manager / SSM Parameter Store for production secrets.
+- Use dedicated deploy key pair for CI/CD.
+- Rotate deploy keys regularly.
+- Use IAM role on EC2 for AWS SDK access (no static AWS keys in pipeline).
+- Never store DB credentials in repository.
+- Prefer Secrets Manager / SSM Parameter Store for production secrets.
 
 ---
 
 ## 13) Optional Next Improvements
 
--   Blue/Green deployment (CodeDeploy)
--   Canary releases behind ALB
--   Containerize and deploy on ECS/EKS
--   Add SAST/dependency scans in CI
+- Blue/Green deployment (CodeDeploy)
+- Canary releases behind ALB
+- Containerize and deploy on ECS/EKS
+- Add SAST/dependency scans in CI
+
