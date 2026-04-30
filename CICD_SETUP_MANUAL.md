@@ -166,14 +166,14 @@ ssh -i github_actions_deploy_key ec2-user@<ec2-public-ip>
 
 In GitHub repo: **Settings -> Secrets and variables -> Actions -> New repository secret**
 
-Create these secrets:
+Required secrets:
 
 - `EC2_HOST`: EC2 public IP or DNS
 - `EC2_USER`: `ec2-user`
 - `EC2_SSH_KEY`: full content of private key (`github_actions_deploy_key`)
 - `EC2_APP_DIR`: `/home/ec2-user/app`
 
-Optional:
+Optional secret:
 
 - `APP_HEALTHCHECK_PATH`: `/api/todos`
 
@@ -189,7 +189,7 @@ Security recommendation:
 
 ## 6) Create GitHub Actions Workflow
 
-Create file: `.github/workflows/deploy-ec2.yml`
+Create file at repository root: `.github/workflows/deploy-ec2.yml`
 
 ```yaml
 name: Build and Deploy to EC2
@@ -226,6 +226,13 @@ jobs:
           JAR_FILE=$(ls target/*.jar | head -n 1)
           echo "jar_file=$JAR_FILE" >> "$GITHUB_OUTPUT"
           echo "release_name=app-$(date +%Y%m%d%H%M%S).jar" >> "$GITHUB_OUTPUT"
+
+      - name: Validate required secrets
+        run: |
+          [ -n "${{ secrets.EC2_HOST }}" ] || { echo "Missing required secret: EC2_HOST"; exit 1; }
+          [ -n "${{ secrets.EC2_USER }}" ] || { echo "Missing required secret: EC2_USER"; exit 1; }
+          [ -n "${{ secrets.EC2_SSH_KEY }}" ] || { echo "Missing required secret: EC2_SSH_KEY"; exit 1; }
+          [ -n "${{ secrets.EC2_APP_DIR }}" ] || { echo "Missing required secret: EC2_APP_DIR"; exit 1; }
 
       - name: Setup SSH
         run: |
@@ -321,8 +328,8 @@ jobs:
     environment: production
 ```
 
-1. Commit the workflow change.
-2. On next run, GitHub pauses the job for reviewer approval before continuing.
+7. Commit the workflow change.
+8. On next run, GitHub pauses the job for reviewer approval before continuing.
 
 ### 7.6 Verify protection is working
 
@@ -347,8 +354,8 @@ git pull
 git checkout -b test/cicd-pipeline
 ```
 
-1. Make a harmless change (for example, add one line in `README.md`).
-2. Commit and push:
+2. Make a harmless change (for example, add one line in `README.md`).
+3. Commit and push:
 
 ```bash
 git add README.md
@@ -441,13 +448,13 @@ After pipeline run:
 sudo systemctl status todo
 ```
 
-1. App endpoint works:
+3. App endpoint works:
 
 ```bash
 curl http://<ec2-public-ip>:8080/api/todos
 ```
 
-1. App logs show normal startup:
+4. App logs show normal startup:
 
 ```bash
 journalctl -u todo -n 200 --no-pager
@@ -472,6 +479,11 @@ journalctl -u todo -n 200 --no-pager
 
 - Ensure Maven package step runs successfully.
 - Check output of `ls target/*.jar`.
+
+### Missing required secret in workflow
+
+- Confirm repo secrets exist with exact names: `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY`, `EC2_APP_DIR`.
+- Re-run workflow after saving secrets (new values are only used in new runs).
 
 ### Service starts but app not healthy
 

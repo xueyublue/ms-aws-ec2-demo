@@ -33,6 +33,13 @@ jobs:
           echo "jar_file=$JAR_FILE" >> "$GITHUB_OUTPUT"
           echo "release_name=app-$(date +%Y%m%d%H%M%S).jar" >> "$GITHUB_OUTPUT"
 
+      - name: Validate required secrets
+        run: |
+          [ -n "${{ secrets.EC2_HOST }}" ] || { echo "Missing required secret: EC2_HOST"; exit 1; }
+          [ -n "${{ secrets.EC2_USER }}" ] || { echo "Missing required secret: EC2_USER"; exit 1; }
+          [ -n "${{ secrets.EC2_SSH_KEY }}" ] || { echo "Missing required secret: EC2_SSH_KEY"; exit 1; }
+          [ -n "${{ secrets.EC2_APP_DIR }}" ] || { echo "Missing required secret: EC2_APP_DIR"; exit 1; }
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh

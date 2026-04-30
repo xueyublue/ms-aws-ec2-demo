@@ -41,7 +41,7 @@ public class TodoCreatedSqsPublisher {
     public void onTodoCreated(TodoCreatedEvent event) {
         if (todoCreatedQueueUrl == null || todoCreatedQueueUrl.isBlank()) {
             log.error("SQS publishing is enabled but queue URL is missing. property=app.sqs.todo-created-queue-url");
-            throw new IllegalStateException("SQS is enabled but app.sqs.todo-created-queue-url is not set");
+            return;
         }
 
         String messageBody = toJson(Map.of(
