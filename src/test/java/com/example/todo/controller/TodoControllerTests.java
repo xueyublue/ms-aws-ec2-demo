@@ -43,12 +43,16 @@ class TodoControllerTests {
         todo.setTitle("Task A");
         todo.setDescription("desc");
         todo.setCompleted(false);
+        todo.setAssignee("alice");
+        todo.setLabels(List.of("backend", "urgent"));
         when(todoService.getAll()).thenReturn(List.of(todo));
 
         mockMvc.perform(get("/api/todos"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[0].title").value("Task A"));
+                .andExpect(jsonPath("$[0].title").value("Task A"))
+                .andExpect(jsonPath("$[0].assignee").value("alice"))
+                .andExpect(jsonPath("$[0].labels[0]").value("backend"));
     }
 
     @Test
@@ -58,6 +62,8 @@ class TodoControllerTests {
         created.setTitle("Created task");
         created.setDescription("desc");
         created.setCompleted(false);
+        created.setAssignee("alice");
+        created.setLabels(List.of("backend", "urgent"));
         when(todoService.create(any(Todo.class))).thenReturn(created);
 
         mockMvc.perform(post("/api/todos")
@@ -66,12 +72,16 @@ class TodoControllerTests {
                                 {
                                   "title": "Created task",
                                   "description": "desc",
-                                  "completed": false
+                                  "completed": false,
+                                  "assignee": "alice",
+                                  "labels": ["backend", "urgent"]
                                 }
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.title").value("Created task"));
+                .andExpect(jsonPath("$.title").value("Created task"))
+                .andExpect(jsonPath("$.assignee").value("alice"))
+                .andExpect(jsonPath("$.labels[1]").value("urgent"));
     }
 
     @Test
@@ -83,6 +93,23 @@ class TodoControllerTests {
                                   "title": "",
                                   "description": "desc",
                                   "completed": false
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+
+        verify(todoService, times(0)).create(any(Todo.class));
+    }
+
+    @Test
+    void createShouldReturnBadRequestWhenLabelIsBlank() throws Exception {
+        mockMvc.perform(post("/api/todos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "Created task",
+                                  "description": "desc",
+                                  "completed": false,
+                                  "labels": ["valid", ""]
                                 }
                                 """))
                 .andExpect(status().isBadRequest());
@@ -110,7 +137,9 @@ class TodoControllerTests {
                                 {
                                   "title": "Updated title",
                                   "description": "Updated desc",
-                                  "completed": true
+                                  "completed": true,
+                                  "assignee": "bob",
+                                  "labels": ["backend"]
                                 }
                                 """))
                 .andExpect(status().isConflict())
