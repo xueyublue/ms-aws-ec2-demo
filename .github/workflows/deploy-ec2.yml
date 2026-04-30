@@ -1,0 +1,57 @@
+name: Build and Deploy to EC2
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Build and test
+        run: mvn -B clean test package
+
+      - name: Resolve artifact path
+        id: artifact
+        run: |
+          JAR_FILE=$(ls target/*.jar | head -n 1)
+          echo "jar_file=$JAR_FILE" >> "$GITHUB_OUTPUT"
+          echo "release_name=app-$(date +%Y%m%d%H%M%S).jar" >> "$GITHUB_OUTPUT"
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload release jar
+        run: |
+          scp -i ~/.ssh/id_ed25519 "${{ steps.artifact.outputs.jar_file }}" 
+            "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.EC2_APP_DIR }}/releases/${{ steps.artifact.outputs.release_name }}"
+
+      - name: Switch symlink and restart service
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" "
+            ln -sfn '${{ secrets.EC2_APP_DIR }}/releases/${{ steps.artifact.outputs.release_name }}' '${{ secrets.EC2_APP_DIR }}/current/app.jar' &&
+            sudo systemctl restart todo &&
+            sudo systemctl is-active --quiet todo
+          "
+
+      - name: Optional health check
+        if: ${{ secrets.APP_HEALTHCHECK_URL != '' }}
+        run: |
+          curl --fail --retry 10 --retry-delay 3 "${{ secrets.APP_HEALTHCHECK_URL }}"

@@ -1,5 +1,10 @@
 # Spring Boot Todo CRUD (Java 25)
 
+## Related Manuals
+
+- EC2 deployment guide: `EC2_SETUP_MANUAL.md`
+- GitHub CI/CD guide: `CICD_SETUP_MANUAL.md`
+
 ## Stack
 
 - Java 25

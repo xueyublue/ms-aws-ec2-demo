@@ -2,6 +2,11 @@
 
 This guide explains how to deploy this Spring Boot microservice to AWS EC2 with PostgreSQL (RDS) and SQS integration.
 
+## Related Manuals
+
+- Project overview and API usage: `README.md`
+- GitHub CI/CD setup (auto deploy to EC2): `CICD_SETUP_MANUAL.md`
+
 ## 1) Prerequisites
 
 - AWS account access with permissions to manage:
@@ -17,13 +22,13 @@ This guide explains how to deploy this Spring Boot microservice to AWS EC2 with 
 ## 2) Create and Configure EC2
 
 1. Launch an EC2 instance (Amazon Linux 2023 recommended).
-   - Name tag example: `todo-ms-ec2-dev`
+  - Name tag example: `todo-ms-ec2-dev`
 2. Instance type:
-   - `t3.small` for typical dev/test
-   - `t3.micro` for light usage
+  - `t3.small` for typical dev/test
+  - `t3.micro` for light usage
 3. Create/attach a Security Group (example: `todo-ms-ec2-sg`) with inbound rules:
-   - SSH `22` from your IP only
-   - App port `8080` from your IP (or from ALB security group)
+  - SSH `22` from your IP only
+  - App port `8080` from your IP (or from ALB security group)
 4. Ensure outbound internet access is enabled.
 
 ### 2.1 Find and Allow Your Public IP
@@ -43,13 +48,16 @@ curl https://checkip.amazonaws.com
 ```
 
 If result is `203.0.113.25`, set Security Group source as:
+
 - `203.0.113.25/32`
 
 Apply this source to:
+
 - SSH `22` (recommended always)
 - Port `8080` (if directly exposing app during testing)
 
 Note:
+
 - If your ISP IP changes, update the Security Group rule again.
 - If you are connected to VPN/corporate network, AWS sees your VPN/proxy public egress IP.
 
@@ -58,16 +66,17 @@ Note:
 When launching EC2, you must select a Key pair:
 
 1. In launch wizard, under **Key pair (login)**:
-   - Choose **Create new key pair** (recommended for first-time setup).
-   - Key pair name example: `todo-ec2-key`.
-   - Key pair type: `RSA`.
-   - Private key format: `.pem`.
+  - Choose **Create new key pair** (recommended for first-time setup).
+  - Key pair name example: `todo-ec2-key`.
+  - Key pair type: `RSA`.
+  - Private key format: `.pem`.
 2. AWS automatically downloads the private key file once (for example: `todo-ec2-key.pem`).
 3. Save this file securely on your local machine. You will use it for:
-   - SSH access
-   - SCP file upload (Step 5)
+  - SSH access
+  - SCP file upload (Step 5)
 
 Important notes:
+
 - AWS allows private key download only once.
 - If you lose the `.pem`, you cannot download it again from AWS.
 - If lost, use one of these recovery options:
@@ -111,12 +120,13 @@ Create a dedicated IAM role and attach it to your EC2 instance.
 }
 ```
 
-3. Policy name example: `todo-ms-sqs-policy`.
-4. Open role `todo-ms-ec2-role` -> **Add permissions** -> attach `todo-ms-sqs-policy`.
+1. Policy name example: `todo-ms-sqs-policy`.
+2. Open role `todo-ms-ec2-role` -> **Add permissions** -> attach `todo-ms-sqs-policy`.
 
 ### 3.3 (Optional) Add KMS Permissions
 
 If your SQS queue uses KMS encryption, also add:
+
 - `kms:Decrypt`
 - `kms:GenerateDataKey`
 
@@ -169,6 +179,7 @@ If you see errors like `UNPROTECTED PRIVATE KEY FILE` or `bad permissions` when 
 10. Click **Apply** -> **OK**.
 
 Recommended:
+
 - Move key to `C:\Users\<your-user>\.ssh\todo-ec2-key.pem`
 - Apply the same permission settings there.
 
@@ -284,12 +295,12 @@ journalctl -u todo -f
 curl http://<ec2-public-ip>:8080/api/todos
 ```
 
-2. Create a Todo via `POST /api/todos`.
-3. Confirm:
-   - Todo row is persisted in `todo` table.
-   - SQS message is published.
-   - Consumer stores message in `sqs_message_log`.
-   - Message is removed from SQS queue after processing.
+1. Create a Todo via `POST /api/todos`.
+2. Confirm:
+  - Todo row is persisted in `todo` table.
+  - SQS message is published.
+  - Consumer stores message in `sqs_message_log`.
+  - Message is removed from SQS queue after processing.
 
 ## 10) Common Troubleshooting
 
@@ -357,3 +368,4 @@ aws ec2 describe-instances --instance-ids <instance-id> --query "Reservations[0]
 - **Stop** keeps EBS volumes/data, but public IP may change unless you use Elastic IP.
 - **Terminate** permanently deletes the instance (and may delete root volume depending on settings).
 - Stopped instance still incurs storage cost (EBS), but compute cost stops.
+
