@@ -42,7 +42,7 @@ jobs:
 
       - name: Upload release jar
         run: |
-          scp -i ~/.ssh/id_ed25519 "${{ steps.artifact.outputs.jar_file }}" 
+          scp -i ~/.ssh/id_ed25519 "${{ steps.artifact.outputs.jar_file }}" \
             "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.EC2_APP_DIR }}/releases/${{ steps.artifact.outputs.release_name }}"
 
       - name: Switch symlink and restart service
