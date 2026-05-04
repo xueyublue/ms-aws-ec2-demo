@@ -54,8 +54,8 @@ ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/github_actions_deploy
 Add public key to EC2:
 
 ```bash
-scp -i ~/.ssh/todo-ec2-key.pem ~/.ssh/github_actions_deploy_key.pub ec2-user@<ec2-public-ip>:/home/ec2-user/
-ssh -i ~/.ssh/todo-ec2-key.pem ec2-user@<ec2-public-ip> "cat ~/github_actions_deploy_key.pub >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+scp -i ~/.ssh/ms-mfe-demo-key.pem ~/.ssh/github_actions_deploy_key.pub ec2-user@<ec2-public-ip>:/home/ec2-user/
+ssh -i ~/.ssh/ms-mfe-demo-key.pem ec2-user@<ec2-public-ip> "cat ~/github_actions_deploy_key.pub >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 ```
 
 ### Option B: Windows (PowerShell)
@@ -64,12 +64,21 @@ ssh -i ~/.ssh/todo-ec2-key.pem ec2-user@<ec2-public-ip> "cat ~/github_actions_de
 ssh-keygen -t ed25519 -C "github-actions-deploy" -f "$env:USERPROFILE\.ssh\github_actions_deploy_key"
 ```
 
+Verify the key files exist before continuing:
+
+```powershell
+Test-Path "$env:USERPROFILE\.ssh\github_actions_deploy_key"
+Test-Path "$env:USERPROFILE\.ssh\github_actions_deploy_key.pub"
+```
+
 Add public key to EC2:
 
 ```powershell
-scp -i "C:\Users\<you>\.ssh\todo-ec2-key.pem" "$env:USERPROFILE\.ssh\github_actions_deploy_key.pub" ec2-user@<ec2-public-ip>:/home/ec2-user/
-ssh -i "C:\Users\<you>\.ssh\todo-ec2-key.pem" ec2-user@<ec2-public-ip> "cat ~/github_actions_deploy_key.pub >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+scp -i "C:\Users\<you>\.ssh\ms-mfe-demo-key.pem" "$env:USERPROFILE\.ssh\github_actions_deploy_key.pub" ec2-user@<ec2-public-ip>:/home/ec2-user/
+ssh -i "C:\Users\<you>\.ssh\ms-mfe-demo-key.pem" ec2-user@<ec2-public-ip> "cat ~/github_actions_deploy_key.pub >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 ```
+
+If `scp` shows `stat local ... No such file or directory`, regenerate the deploy key and retry the same commands.
 
 ## 5) Configure GitHub Secrets
 
