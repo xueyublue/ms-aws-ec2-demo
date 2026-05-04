@@ -5,8 +5,7 @@ This version is optimized for macOS local development/deployment steps.
 ## Related Manuals
 
 - Project/API usage: `README.md`
-- CI/CD guide (macOS): `CICD_SETUP_MANUAL_MAC.md`
-- CI/CD guide (Windows): `CICD_SETUP_MANUAL_WINDOWS.md`
+- CI/CD guide (Windows + macOS): `CICD_SETUP_MANUAL.md`
 
 ## 1) Prerequisites
 

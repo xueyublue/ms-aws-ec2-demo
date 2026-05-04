@@ -1,12 +1,12 @@
-# CI/CD Setup Manual (macOS -> GitHub Actions -> EC2)
+# CI/CD Setup Manual (Windows/macOS -> GitHub Actions -> EC2)
 
-This version is optimized for macOS local setup steps.
+This guide combines local setup steps for both Windows and macOS.
 
 ## Related Manuals
 
 - Project/API setup: `README.md`
-- EC2 setup (macOS): `EC2_SETUP_MANUAL_MAC.md`
 - EC2 setup (Windows): `EC2_SETUP_MANUAL_WINDOWS.md`
+- EC2 setup (macOS): `EC2_SETUP_MANUAL_MAC.md`
 
 ## 1) Deployment Flow
 
@@ -16,7 +16,7 @@ This version is optimized for macOS local setup steps.
 
 - EC2 deployment already working once
 - `todo` systemd service configured on EC2
-- GitHub repository admin/maintainer access
+- GitHub repository admin/maintainer access (or equivalent branch/workflow permissions)
 - SSH access to EC2
 
 ## 3) Prepare EC2 for CI Deploy
@@ -41,9 +41,11 @@ ExecStart=/usr/bin/java -jar /home/ec2-user/app/current/app.jar
 Notes:
 - DB credentials should be read from AWS Systems Manager Parameter Store, not GitHub secrets.
 - The loader script path should be `/home/ec2-user/app/bin/load-env-from-ssm.sh`.
-- Full setup steps for Parameter Store + loader script are in `EC2_SETUP_MANUAL_MAC.md`.
+- Full setup steps for Parameter Store + loader script are in `EC2_SETUP_MANUAL_WINDOWS.md` and `EC2_SETUP_MANUAL_MAC.md`.
 
-## 4) Generate Deploy Key (macOS)
+## 4) Generate Deploy Key
+
+### Option A: macOS (Terminal / zsh)
 
 ```bash
 ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/github_actions_deploy_key
@@ -54,6 +56,19 @@ Add public key to EC2:
 ```bash
 scp -i ~/.ssh/todo-ec2-key.pem ~/.ssh/github_actions_deploy_key.pub ec2-user@<ec2-public-ip>:/home/ec2-user/
 ssh -i ~/.ssh/todo-ec2-key.pem ec2-user@<ec2-public-ip> "cat ~/github_actions_deploy_key.pub >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+```
+
+### Option B: Windows (PowerShell)
+
+```powershell
+ssh-keygen -t ed25519 -C "github-actions-deploy" -f "$env:USERPROFILE\.ssh\github_actions_deploy_key"
+```
+
+Add public key to EC2:
+
+```powershell
+scp -i "C:\Users\<you>\.ssh\todo-ec2-key.pem" "$env:USERPROFILE\.ssh\github_actions_deploy_key.pub" ec2-user@<ec2-public-ip>:/home/ec2-user/
+ssh -i "C:\Users\<you>\.ssh\todo-ec2-key.pem" ec2-user@<ec2-public-ip> "cat ~/github_actions_deploy_key.pub >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 ```
 
 ## 5) Configure GitHub Secrets
@@ -98,4 +113,3 @@ Current workflow includes:
 - Service restart fail: verify sudoers + service file path.
 - Startup fail after restart: check `journalctl -u todo -n 100 --no-pager` for `AccessDeniedException`, `ParameterNotFound`, or KMS decrypt errors.
 - Health check fail: verify app binds to `8080` and `APP_HEALTHCHECK_PATH`.
-

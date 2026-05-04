@@ -4,8 +4,7 @@
 
 - EC2 deployment guide (Windows): `EC2_SETUP_MANUAL_WINDOWS.md`
 - EC2 deployment guide (macOS): `EC2_SETUP_MANUAL_MAC.md`
-- GitHub CI/CD guide (Windows): `CICD_SETUP_MANUAL_WINDOWS.md`
-- GitHub CI/CD guide (macOS): `CICD_SETUP_MANUAL_MAC.md`
+- GitHub CI/CD guide (Windows + macOS): `CICD_SETUP_MANUAL.md`
 
 ## Stack
 
