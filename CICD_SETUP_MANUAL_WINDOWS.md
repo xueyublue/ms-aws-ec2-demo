@@ -34,8 +34,14 @@ sudo chmod 440 /etc/sudoers.d/todo-deploy
 Ensure `todo.service` uses:
 
 ```ini
+ExecStartPre=/home/ec2-user/app/bin/load-env-from-ssm.sh
 ExecStart=/usr/bin/java -jar /home/ec2-user/app/current/app.jar
 ```
+
+Notes:
+- DB credentials should be read from AWS Systems Manager Parameter Store, not GitHub secrets.
+- The loader script path should be `/home/ec2-user/app/bin/load-env-from-ssm.sh`.
+- Full setup steps for Parameter Store + loader script are in `EC2_SETUP_MANUAL_WINDOWS.md`.
 
 ## 4) Generate Deploy Key (Windows)
 
@@ -61,6 +67,8 @@ In `Settings -> Secrets and variables -> Actions`, add:
 - `EC2_SSH_KEY` (private key content of `github_actions_deploy_key`)
 - `EC2_APP_DIR` (`/home/ec2-user/app`)
 - optional `APP_HEALTHCHECK_PATH` (`/api/todos`)
+
+Do not add DB username/password to GitHub secrets when using Parameter Store.
 
 ## 6) Workflow File
 
@@ -90,5 +98,6 @@ Current workflow includes:
 - Missing secret error: verify exact secret names.
 - SSH fail: confirm `authorized_keys` contains deploy public key.
 - Service restart fail: verify sudoers + service file path.
+- Startup fail after restart: check `journalctl -u todo -n 100 --no-pager` for `AccessDeniedException`, `ParameterNotFound`, or KMS decrypt errors.
 - Health check fail: verify app binds to `8080` and `APP_HEALTHCHECK_PATH`.
 

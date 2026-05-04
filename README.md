@@ -74,7 +74,7 @@ aws configure
 5. Provide values when prompted:
    - `AWS Access Key ID`
    - `AWS Secret Access Key`
-   - `Default region name` (for example: `ap-southeast-2`)
+   - `Default region name` (for example: `ap-southeast-1`)
    - `Default output format` (for example: `json`)
 
 Optional verification:
@@ -322,7 +322,7 @@ Example message body:
 
 Required environment variables for SQS publishing:
 - `APP_SQS_ENABLED=true`
-- `APP_SQS_REGION=<aws-region>`
+- `APP_SQS_REGION=ap-southeast-1`
 - `APP_SQS_TODO_CREATED_QUEUE_URL=<sqs-queue-url>`
 
 If SQS is disabled (`APP_SQS_ENABLED=false`), Todo creation still works and no message is sent.
