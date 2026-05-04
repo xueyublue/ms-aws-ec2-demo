@@ -42,32 +42,19 @@ jobs:
 
       - name: Setup SSH
         run: |
-          set -euo pipefail
           mkdir -p ~/.ssh
-          # Normalize copied secrets (especially keys pasted from Windows)
-          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_ed25519
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          # Validate private key format early so failures are explicit in this step.
-          ssh-keygen -y -f ~/.ssh/id_ed25519 > /dev/null
-
-          EC2_HOST_ONLY="${{ secrets.EC2_HOST }}"
-          EC2_HOST_ONLY="${EC2_HOST_ONLY#*@}"
-          touch ~/.ssh/known_hosts
-          # Best effort host key prefetch. SSH still allows first connect via accept-new.
-          ssh-keyscan -T 15 -H "$EC2_HOST_ONLY" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Upload release jar
         run: |
-          EC2_HOST_ONLY="${{ secrets.EC2_HOST }}"
-          EC2_HOST_ONLY="${EC2_HOST_ONLY#*@}"
-          scp -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=~/.ssh/known_hosts -i ~/.ssh/id_ed25519 "${{ steps.artifact.outputs.jar_file }}" \
-            "${{ secrets.EC2_USER }}@$EC2_HOST_ONLY:${{ secrets.EC2_APP_DIR }}/releases/${{ steps.artifact.outputs.release_name }}"
+          scp -i ~/.ssh/id_ed25519 "${{ steps.artifact.outputs.jar_file }}" \
+            "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.EC2_APP_DIR }}/releases/${{ steps.artifact.outputs.release_name }}"
 
       - name: Switch symlink and restart service
         run: |
-          EC2_HOST_ONLY="${{ secrets.EC2_HOST }}"
-          EC2_HOST_ONLY="${EC2_HOST_ONLY#*@}"
-          ssh -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=~/.ssh/known_hosts -i ~/.ssh/id_ed25519 "${{ secrets.EC2_USER }}@$EC2_HOST_ONLY" "
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" "
             ln -sfn '${{ secrets.EC2_APP_DIR }}/releases/${{ steps.artifact.outputs.release_name }}' '${{ secrets.EC2_APP_DIR }}/current/app.jar' &&
             sudo systemctl restart todo &&
             sudo systemctl is-active --quiet todo
@@ -76,7 +63,5 @@ jobs:
       - name: Optional health check (on EC2 localhost)
         if: ${{ env.APP_HEALTHCHECK_PATH != '' }}
         run: |
-          EC2_HOST_ONLY="${{ secrets.EC2_HOST }}"
-          EC2_HOST_ONLY="${EC2_HOST_ONLY#*@}"
-          ssh -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=~/.ssh/known_hosts -i ~/.ssh/id_ed25519 "${{ secrets.EC2_USER }}@$EC2_HOST_ONLY" \
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" \
             "curl --fail --retry 10 --retry-delay 3 http://127.0.0.1:8080$APP_HEALTHCHECK_PATH"
