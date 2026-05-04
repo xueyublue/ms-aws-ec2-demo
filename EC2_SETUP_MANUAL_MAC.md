@@ -55,12 +55,23 @@ ssh -i ~/.ssh/todo-ec2-key.pem ec2-user@<ec2-public-ip>
   - `sqs:ReceiveMessage`
   - `sqs:DeleteMessage`
   - `sqs:GetQueueAttributes`
-3. Attach role to EC2 instance.
+3. Create and attach Parameter Store policy:
+  - `ssm:GetParameter`
+  - `ssm:GetParameters`
+  - Resource scope example:
+    - `arn:aws:ssm:ap-southeast-1:715840489161:parameter/todo/prod/db/url`
+    - `arn:aws:ssm:ap-southeast-1:715840489161:parameter/todo/prod/db/username`
+    - `arn:aws:ssm:ap-southeast-1:715840489161:parameter/todo/prod/db/password`
+4. Add KMS decrypt permission for SecureString password:
+  - `kms:Decrypt` on KMS key for `/todo/prod/db/password`
+5. Attach role to EC2 instance.
 
 Verify:
 
 ```bash
 aws sts get-caller-identity
+aws ssm get-parameter --name "/todo/prod/db/url" --region ap-southeast-1
+aws ssm get-parameter --name "/todo/prod/db/password" --with-decryption --region ap-southeast-1
 ```
 
 ## 5) Install Java on EC2
@@ -92,22 +103,52 @@ scp -i ~/.ssh/todo-ec2-key.pem target/todo-0.0.1-SNAPSHOT.jar ec2-user@<ec2-publ
 ssh -i ~/.ssh/todo-ec2-key.pem ec2-user@<ec2-public-ip> "ln -sfn /home/ec2-user/app/releases/app-manual.jar /home/ec2-user/app/current/app.jar"
 ```
 
-## 7) Configure App Env and systemd on EC2
+## 7) Configure Parameter Store + systemd on EC2
 
-Create env file:
+Create SSM parameters (run once from local or CloudShell):
 
 ```bash
-cat <<'EOF' > /home/ec2-user/todo.env
-SPRING_DATASOURCE_URL=jdbc:postgresql://<rds-endpoint>:5432/<db-name>?sslmode=require
-SPRING_DATASOURCE_USERNAME=<db-username>
-SPRING_DATASOURCE_PASSWORD=<db-password>
+aws ssm put-parameter --name "/todo/prod/db/url" --type String --value "jdbc:postgresql://<rds-endpoint>:5432/<db-name>?sslmode=require" --overwrite --region ap-southeast-1
+aws ssm put-parameter --name "/todo/prod/db/username" --type String --value "<db-username>" --overwrite --region ap-southeast-1
+aws ssm put-parameter --name "/todo/prod/db/password" --type SecureString --value "<db-password>" --overwrite --region ap-southeast-1
+```
+
+Create loader script on EC2 (`/home/ec2-user/app/bin/load-env-from-ssm.sh`):
+
+```bash
+mkdir -p /home/ec2-user/app/bin
+cat <<'EOF' > /home/ec2-user/app/bin/load-env-from-ssm.sh
+#!/usr/bin/env bash
+set -euo pipefail
+
+REGION="ap-southeast-1"
+ENV_FILE="/home/ec2-user/todo.env"
+
+DB_URL=$(aws ssm get-parameter --region "$REGION" --name "/todo/prod/db/url" --query "Parameter.Value" --output text)
+DB_USER=$(aws ssm get-parameter --region "$REGION" --name "/todo/prod/db/username" --query "Parameter.Value" --output text)
+DB_PASS=$(aws ssm get-parameter --region "$REGION" --name "/todo/prod/db/password" --with-decryption --query "Parameter.Value" --output text)
+
+cat > "$ENV_FILE" <<EOT
+SPRING_DATASOURCE_URL=$DB_URL
+SPRING_DATASOURCE_USERNAME=$DB_USER
+SPRING_DATASOURCE_PASSWORD=$DB_PASS
 SPRING_JPA_HIBERNATE_DDL_AUTO=update
 APP_SQS_ENABLED=true
-APP_SQS_REGION=ap-southeast-2
-APP_SQS_TODO_CREATED_QUEUE_URL=https://sqs.ap-southeast-2.amazonaws.com/<account-id>/<queue-name>
+APP_SQS_REGION=ap-southeast-1
+APP_SQS_TODO_CREATED_QUEUE_URL=https://sqs.ap-southeast-1.amazonaws.com/715840489161/<queue-name>
 APP_SQS_CONSUMER_ENABLED=true
-APP_SQS_CONSUMER_QUEUE_URL=https://sqs.ap-southeast-2.amazonaws.com/<account-id>/<queue-name>
+APP_SQS_CONSUMER_QUEUE_URL=https://sqs.ap-southeast-1.amazonaws.com/715840489161/<queue-name>
+EOT
+
+chmod 600 "$ENV_FILE"
 EOF
+chmod +x /home/ec2-user/app/bin/load-env-from-ssm.sh
+```
+
+Test loader script:
+
+```bash
+/home/ec2-user/app/bin/load-env-from-ssm.sh
 ```
 
 Create service:
@@ -121,6 +162,7 @@ After=network.target
 [Service]
 User=ec2-user
 WorkingDirectory=/home/ec2-user/app
+ExecStartPre=/home/ec2-user/app/bin/load-env-from-ssm.sh
 EnvironmentFile=/home/ec2-user/todo.env
 ExecStart=/usr/bin/java -jar /home/ec2-user/app/current/app.jar
 SuccessExitStatus=143
@@ -146,7 +188,13 @@ sudo systemctl status todo
 ```bash
 curl http://<ec2-public-ip>:8080/api/todos
 journalctl -u todo -n 100 --no-pager
+journalctl -u todo -f
 ```
+
+If startup fails, check common issues in logs:
+- `AccessDeniedException`: missing `ssm:GetParameter` or `kms:Decrypt`
+- `ParameterNotFound`: wrong parameter name/path
+- region mismatch between script and parameter location
 
 ## 9) Shutdown
 
